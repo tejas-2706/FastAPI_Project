@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel,EmailStr
+from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Annotated, Literal, Optional
 from app import models
 from app.database import engine, SessionLocal
@@ -9,6 +10,14 @@ from datetime import datetime
 
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine) # it will create all tables and columns
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Vite dev server
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class ChoiceBase(BaseModel):
     choice_text: str
