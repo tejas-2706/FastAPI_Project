@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form
 from pydantic import BaseModel,EmailStr
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Annotated, Literal, Optional
@@ -7,6 +7,7 @@ from app.database import engine, SessionLocal
 from sqlalchemy.orm import Session
 import bcrypt
 from datetime import datetime
+import os 
 
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine) # it will create all tables and columns
@@ -45,51 +46,88 @@ class SignupData(BaseModel):
     password: Optional[str] = None  # Now optional
     country_code: str
     phone: str
+    college: Optional[str] = None
     current_location: Optional[str] = None
     home_town: Optional[str] = None
     country: Optional[str] = None
     career_preference_internships: Optional[bool] = False
     career_preference_jobs: Optional[bool] = False
     preferred_work_location: Optional[str] = None  # Now optional
+    preferred_work_mode: Optional[str] = None
     resume_url: Optional[str] = None
 
 @app.post("/signup")
 async def signup(
-    user: SignupData, 
-    db: Annotated[Session, Depends(get_db)]
-    ):
+    db: Annotated[Session, Depends(get_db)],
+    firstname: str = Form(...),
+    lastname: str = Form(...),
+    gender: Optional[str] = Form(None),
+    date_of_birth: Optional[datetime] = Form(None),
+    email: EmailStr = Form(...),
+    password: Optional[str] = Form(None),
+    country_code: str = Form(...),
+    phone: str = Form(...),
+    college: Optional[str] = Form(None),
+    current_location: Optional[str] = Form(None),
+    home_town: Optional[str] = Form(None),
+    country: Optional[str] = Form(None),
+    career_preference_internships: Optional[bool] = Form(False),
+    career_preference_jobs: Optional[bool] = Form(False),
+    preferred_work_location: Optional[str] = Form(None),
+    preferred_work_mode: Optional[str] = Form(None),
+    resume: Optional[UploadFile] = File(None),
+):
     # Check if user already exists
-    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+    existing_user = db.query(models.User).filter(models.User.email == email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email is already registered")
 
     # Validate phone
-    if not user.phone.isdigit() or len(user.phone) != 10:
+    if not phone.isdigit() or len(phone) != 10:
         raise HTTPException(status_code=400, detail="Invalid phone number")
 
-    formatted_phone = user.country_code + user.phone
+    formatted_phone = country_code + phone
 
     # Handle password (optional)
     hashed_password = None
-    if user.password:
-        hashed_password = bcrypt.hashpw(user.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    if password:
+        hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    
+    # Handle resume upload
+    resume_url = None
+    if resume:
+        contents = await resume.read()
+    
+        resume_dir = "uploads/resumes"
+        os.makedirs(resume_dir, exist_ok=True)  # ✅ Create the folder if it doesn't exist
+
+        # Optional: sanitize filename to avoid invalid characters
+        sanitized_email = email.replace("@", "_at_").replace(".", "_")
+        filename = f"{resume_dir}/{sanitized_email}_{resume.filename}"
+
+        with open(filename, "wb") as f:
+            f.write(contents)
+
+        resume_url = filename
 
     # Create user instance
     new_user = models.User(
-        firstname=user.firstname,
-        lastname=user.lastname,
-        gender=user.gender,
-        date_of_birth=user.date_of_birth,
-        email=user.email,
+        firstname=firstname,
+        lastname=lastname,
+        gender=gender,
+        date_of_birth=date_of_birth,
+        email=email,
         password=hashed_password,
         phone=formatted_phone,
-        current_location=user.current_location,
-        home_town=user.home_town,
-        country=user.country,
-        career_preference_internships=user.career_preference_internships,
-        career_preference_jobs=user.career_preference_jobs,
-        preferred_work_location=user.preferred_work_location,
-        resume_url=user.resume_url,
+        college=college,
+        current_location=current_location,
+        home_town=home_town,
+        country=country,
+        career_preference_internships=career_preference_internships,
+        career_preference_jobs=career_preference_jobs,
+        preferred_work_location=preferred_work_location,
+        preferred_work_mode=preferred_work_mode,
+        resume_url=resume_url,
     )
 
     db.add(new_user)
