@@ -53,7 +53,6 @@ export default function StudentSignupForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  // Removed showConfirmPassword state as it's no longer needed
 
   const handleChange = (
   e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
