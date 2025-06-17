@@ -293,8 +293,6 @@ export default function StudentSignupForm() {
             </div>
           </div>
 
-          {/* REMOVED: Confirm Password Section */}
-
           <div className="flex flex-col">
             <label htmlFor="gender" className="font-medium mb-1 text-gray-300">
               Gender
