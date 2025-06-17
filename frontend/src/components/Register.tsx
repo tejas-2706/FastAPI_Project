@@ -63,15 +63,18 @@ interface SignupData {
   password?: string; // Password is now optional in interface if it's not always required by backend
   country_code: string;
   phone: string;
+  college?: string;
   current_location: string;
   home_town: string;
   country: string;
   career_preference_internships: boolean;
   career_preference_jobs: boolean;
   preferred_work_location: string;
+  preferred_work_mode: string;
   zip_postal_code?: string;
   street_address?: string;
   terms_agreement: boolean;
+  resume: File | null;
 }
 
 const initialState: SignupData = {
@@ -83,15 +86,18 @@ const initialState: SignupData = {
   password: "",
   country_code: "+91",
   phone: "",
+  college: "",
   current_location: "",
   home_town: "",
   country: "India",
   career_preference_internships: false,
   career_preference_jobs: false,
   preferred_work_location: "",
+  preferred_work_mode: "",
   zip_postal_code: "",
   street_address: "",
   terms_agreement: false,
+  resume: null,
 };
 
 export default function StudentSignupForm() {
@@ -103,51 +109,67 @@ export default function StudentSignupForm() {
   // Removed showConfirmPassword state as it's no longer needed
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value, type, checked } = e.target as HTMLInputElement;
+  e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+) => {
+  const { name, value, type, checked, files } = e.target as HTMLInputElement;
+
+  if (type === "file") {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: files && files.length > 0 ? files[0] : null,
+    }));
+  } else {
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-  };
+  }
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
+  e.preventDefault();
+  setError(null);
+  setSuccess(null);
 
-    if (!/^\d{10}$/.test(formData.phone)) {
-      setError("Phone number must be exactly 10 digits.");
-      return;
-    }
-    // Removed password matching validation
-    if (!formData.terms_agreement) {
-      setError("You must agree to the Terms of Service and Privacy Policy.");
-      return;
-    }
+  if (!/^\d{10}$/.test(formData.phone)) {
+    setError("Phone number must be exactly 10 digits.");
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const payload = {
-        ...formData,
-        phone: formData.phone,
-        // confirm_password is no longer in formData, so no need to explicitly exclude
-      };
+  if (!formData.terms_agreement) {
+    setError("You must agree to the Terms of Service and Privacy Policy.");
+    return;
+  }
 
-          const response = await axios.post(
-  `${import.meta.env.VITE_API_BASE_URL}/signup`,
-  payload
-);
-      setSuccess(response.data.message);
-      setFormData(initialState); // Clear form on success
-    } catch (err: any) {
-      const detail = err.response?.data?.detail ?? "Registration failed";
-      setError(detail);
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    const form = new FormData();
+
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        form.append(key, value as any);
+      }
+    });
+
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_BASE_URL}/signup`,
+      form,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    setSuccess(response.data.message);
+    setFormData(initialState);
+  } catch (err: any) {
+    const detail = err.response?.data?.detail ?? "Registration failed";
+    setError(detail);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     // Main container: Still full screen for background, but its overflow is hidden to contain blobs
@@ -158,29 +180,48 @@ export default function StudentSignupForm() {
       <div className="absolute top-1/4 right-1/4 w-72 h-72 bg-pink-600 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
 
       {/* Form container: This is the scrollable element if content overflows */}
-      <div className="w-full max-w-4xl bg-gray-900 bg-opacity-90 backdrop-blur-md shadow-2xl rounded-2xl p-8 md:p-12 border border-blue-500 relative z-10 animate-fade-in mx-4 my-8 max-h-[95vh] overflow-y-scroll" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-        <div className="flex justify-center mb-10"> {/* Increased bottom margin */}
+      <div
+        className="w-full max-w-4xl bg-gray-900 bg-opacity-90 backdrop-blur-md shadow-2xl rounded-2xl p-8 md:p-12 border border-blue-500 relative z-10 animate-fade-in mx-4 my-8 max-h-[95vh] overflow-y-scroll"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        <div className="flex justify-center mb-10">
+          {" "}
+          {/* Increased bottom margin */}
           {/* EduDiagno Logo/Text */}
           <span className="text-white text-4xl font-extrabold flex items-center">
-            <span className="bg-blue-600 px-4 py-2 rounded-xl mr-3 text-white">E</span> {/* Larger padding, more rounded */}
+            <span className="bg-blue-600 px-4 py-2 rounded-xl mr-3 text-white">
+              E
+            </span>{" "}
+            {/* Larger padding, more rounded */}
             EduDiagno
           </span>
         </div>
         <h2 className="text-3xl md:text-4xl font-bold mb-3 text-white text-center tracking-tight">
           Create Student Account
         </h2>
-        <p className="text-gray-400 text-center mb-12 text-lg"> {/* Increased bottom margin */}
+        <p className="text-gray-400 text-center mb-12 text-lg">
+          {" "}
+          {/* Increased bottom margin */}
           Start hiring smarter with AI-powered interviews
         </p>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-gray-200"> {/* Increased gap */}
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-gray-200"
+        >
+          {" "}
+          {/* Increased gap */}
           {/* Basic Information Section */}
-          <div className="md:col-span-2 text-xl font-semibold text-white mb-2 border-b border-gray-700 pb-2"> {/* Adjusted margin-bottom */}
+          <div className="md:col-span-2 text-xl font-semibold text-white mb-2 border-b border-gray-700 pb-2">
+            {" "}
+            {/* Adjusted margin-bottom */}
             Basic Information
           </div>
-
           <div className="flex flex-col">
-            <label htmlFor="firstname" className="font-medium mb-1 text-gray-300">
+            <label
+              htmlFor="firstname"
+              className="font-medium mb-1 text-gray-300"
+            >
               First Name
             </label>
             <input
@@ -193,9 +234,11 @@ export default function StudentSignupForm() {
               placeholder="John"
             />
           </div>
-
           <div className="flex flex-col">
-            <label htmlFor="lastname" className="font-medium mb-1 text-gray-300">
+            <label
+              htmlFor="lastname"
+              className="font-medium mb-1 text-gray-300"
+            >
               Last Name
             </label>
             <input
@@ -208,7 +251,6 @@ export default function StudentSignupForm() {
               placeholder="Doe"
             />
           </div>
-
           <div className="flex flex-col">
             <label htmlFor="email" className="font-medium mb-1 text-gray-300">
               Email Address
@@ -224,9 +266,10 @@ export default function StudentSignupForm() {
               placeholder="john.doe@example.com"
             />
           </div>
-
           <div className="flex flex-col">
-            <label className="font-medium mb-1 text-gray-300">Phone Number</label>
+            <label className="font-medium mb-1 text-gray-300">
+              Phone Number
+            </label>
             <div className="flex space-x-2">
               <input
                 type="text"
@@ -247,9 +290,11 @@ export default function StudentSignupForm() {
               />
             </div>
           </div>
-
           <div className="flex flex-col">
-            <label htmlFor="password" className="font-medium mb-1 text-gray-300">
+            <label
+              htmlFor="password"
+              className="font-medium mb-1 text-gray-300"
+            >
               Password
             </label>
             <div className="relative">
@@ -287,12 +332,16 @@ export default function StudentSignupForm() {
                       d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
                     />
                   )}
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
                 </svg>
               </span>
             </div>
           </div>
-
+          {/* REMOVED: Confirm Password Section */}
           <div className="flex flex-col">
             <label htmlFor="gender" className="font-medium mb-1 text-gray-300">
               Gender
@@ -325,9 +374,11 @@ export default function StudentSignupForm() {
               </div>
             </div>
           </div>
-
           <div className="flex flex-col">
-            <label htmlFor="date_of_birth" className="font-medium mb-1 text-gray-300">
+            <label
+              htmlFor="date_of_birth"
+              className="font-medium mb-1 text-gray-300"
+            >
               Date of Birth
             </label>
             <input
@@ -340,14 +391,30 @@ export default function StudentSignupForm() {
               className="bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 date-input-placeholder hover:border-blue-500"
             />
           </div>
-
+          <div className="flex flex-col">
+            <label htmlFor="college" className="font-medium mb-1 text-gray-300">
+              College
+            </label>
+            <input
+              type="text"
+              id="college"
+              name="college"
+              value={formData.college}
+              onChange={handleChange}
+              required
+              className="bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-500"
+              placeholder="College name"
+            />
+          </div>
           {/* Address Information Section */}
           <div className="md:col-span-2 text-xl font-semibold text-white mb-2 mt-6 border-b border-gray-700 pb-2">
             Address Information
           </div>
-
           <div className="md:col-span-2 flex flex-col">
-            <label htmlFor="street_address" className="font-medium mb-1 text-gray-300">
+            <label
+              htmlFor="street_address"
+              className="font-medium mb-1 text-gray-300"
+            >
               Street Address
             </label>
             <input
@@ -360,8 +427,6 @@ export default function StudentSignupForm() {
               placeholder="123 Main St"
             />
           </div>
-           
-
           <div className="flex flex-col">
             <label htmlFor="country" className="font-medium mb-1 text-gray-300">
               Country
@@ -376,9 +441,11 @@ export default function StudentSignupForm() {
               placeholder="India"
             />
           </div>
-
           <div className="flex flex-col">
-            <label htmlFor="current_location" className="font-medium mb-1 text-gray-300">
+            <label
+              htmlFor="current_location"
+              className="font-medium mb-1 text-gray-300"
+            >
               State/Province
             </label>
             <input
@@ -391,9 +458,11 @@ export default function StudentSignupForm() {
               placeholder="Maharashtra"
             />
           </div>
-
           <div className="flex flex-col">
-            <label htmlFor="home_town" className="font-medium mb-1 text-gray-300">
+            <label
+              htmlFor="home_town"
+              className="font-medium mb-1 text-gray-300"
+            >
               City
             </label>
             <input
@@ -406,9 +475,11 @@ export default function StudentSignupForm() {
               placeholder="Pune"
             />
           </div>
-
           <div className="flex flex-col">
-            <label htmlFor="zip_postal_code" className="font-medium mb-1 text-gray-300">
+            <label
+              htmlFor="zip_postal_code"
+              className="font-medium mb-1 text-gray-300"
+            >
               ZIP/Postal Code
             </label>
             <input
@@ -421,15 +492,11 @@ export default function StudentSignupForm() {
               placeholder="411001"
             />
           </div>
-
-        
-
           {/* Career Preferences Section */}
           <div className="md:col-span-2 text-xl font-semibold text-white mb-2 mt-6 border-b border-gray-700 pb-2">
             Career Preferences
           </div>
-
-           <div className="flex items-center space-x-8 md:col-span-2 mt-4">
+          <div className="flex items-center space-x-8 md:col-span-2 mt-4">
             <label className="inline-flex items-center space-x-2 text-gray-300">
               <input
                 type="checkbox"
@@ -451,22 +518,86 @@ export default function StudentSignupForm() {
               <span>Jobs</span>
             </label>
           </div>
+          <div className="md:col-span-2">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex flex-col w-full md:w-1/2">
+                <label
+                  htmlFor="preferred_work_location"
+                  className="font-medium mb-1 text-gray-300"
+                >
+                  Preferred Work Location
+                </label>
+                <input
+                  id="preferred_work_location"
+                  name="preferred_work_location"
+                  value={formData.preferred_work_location}
+                  onChange={handleChange}
+                  required
+                  className="bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500 hover:border-blue-500"
+                  placeholder="Pune, Bangalore, Mumbai"
+                />
+              </div>
 
-          <div className="flex flex-col md:col-span-2">
-            <label htmlFor="preferred_work_location" className="font-medium mb-1 text-gray-300">
-              Preferred Work Location
-            </label>
-            <input
-              id="preferred_work_location"
-              name="preferred_work_location"
-              value={formData.preferred_work_location}
-              onChange={handleChange}
-              required
-              className="bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500 hover:border-blue-500"
-              placeholder="Remote, Bangalore, Mumbai"
-            />
+              <div className="flex flex-col w-full md:w-1/2">
+                <label
+                  htmlFor="preferred_work_mode"
+                  className="font-medium mb-1 text-gray-300"
+                >
+                  Preferred Work Mode
+                </label>
+                <select
+                  id="preferred_work_mode"
+                  name="preferred_work_mode"
+                  value={formData.preferred_work_mode}
+                  onChange={handleChange}
+                  className="bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500 hover:border-blue-500"
+                  required
+                >
+                  <option value="">Select mode</option>
+                  <option value="REMOTE">Remote</option>
+                  <option value="ONSITE">Onsite</option>
+                  <option value="HYBRID">Hybrid</option>
+                </select>
+              </div>
+            </div>
           </div>
+          {/* Resume Upload */}
+          <div className="md:col-span-2 flex flex-col mt-4 relative">
+            <label htmlFor="resume" className="font-medium mb-1 text-gray-300">
+              Upload Resume
+            </label>
+            <div className="relative">
+              <input
+                type="file"
+                id="resume"
+                name="resume"
+                accept=".pdf,.doc,.docx"
+                onChange={handleChange}
+                className="bg-gray-700 text-white rounded-lg p-3 border border-gray-600 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 file:bg-blue-600 file:text-white file:px-4 file:py-2 file:rounded-md file:border-0 file:cursor-pointer"
+              />
+              {formData.resume && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      resume: null,
+                    }))
+                  }
+                  className="absolute right-2 top-2 text-white bg-red-600 hover:bg-red-700 rounded-full w-6 h-6 flex items-center justify-center text-sm"
+                  title="Remove resume"
+                >
+                  ✖
+                </button>
+              )}
+            </div>
 
+            {formData.resume && (
+              <span className="text-gray-400 text-sm mt-2">
+                Selected: {formData.resume.name}
+              </span>
+            )}
+          </div>
           {/* Terms and Conditions Checkbox */}
           <div className="md:col-span-2 flex items-start mt-8">
             <input
@@ -478,19 +609,28 @@ export default function StudentSignupForm() {
               required
               className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-600 rounded bg-gray-700 checked:bg-blue-600 checked:border-transparent focus:ring-offset-gray-800 mt-1"
             />
-            <label htmlFor="terms_agreement" className="ml-3 text-gray-400 text-base leading-relaxed">
+            <label
+              htmlFor="terms_agreement"
+              className="ml-3 text-gray-400 text-base leading-relaxed"
+            >
               I agree to the{" "}
-              <a href="#" className="text-blue-400 hover:underline font-semibold">
+              <a
+                href="#"
+                className="text-blue-400 hover:underline font-semibold"
+              >
                 Terms of Service
               </a>{" "}
               and{" "}
-              <a href="#" className="text-blue-400 hover:underline font-semibold">
+              <a
+                href="#"
+                className="text-blue-400 hover:underline font-semibold"
+              >
                 Privacy Policy
               </a>
-              , and consent to having my data processed for the purpose of creating an account.
+              , and consent to having my data processed for the purpose of
+              creating an account.
             </label>
           </div>
-
           {/* Submission Button */}
           <div className="md:col-span-2 flex justify-center mt-10">
             <button
@@ -515,7 +655,6 @@ export default function StudentSignupForm() {
               </svg>
             </button>
           </div>
-
           {/* Error and Success Messages */}
           {error && (
             <p className="md:col-span-2 text-red-400 text-center font-medium mt-6 bg-red-900 bg-opacity-30 p-3 rounded-lg border border-red-700 animate-fade-in">
@@ -527,9 +666,7 @@ export default function StudentSignupForm() {
               {success}
             </p>
           )}
-
           {/* Login Link */}
-          
         </form>
       </div>
     </div>
