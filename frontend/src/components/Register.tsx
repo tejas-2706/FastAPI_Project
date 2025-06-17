@@ -1,59 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
 
-// Make sure these styles are in your global CSS file (e.g., src/index.css)
-// and NOT in this component's <style> tag.
-/*
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #333;
-  border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #4a90e2;
-  border-radius: 10px;
-  border: 2px solid #333;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #6aabf7;
-}
-
-.date-input-placeholder::-webkit-datetime-edit-year-field,
-.date-input-placeholder::-webkit-datetime-edit-month-field,
-.date-input-placeholder::-webkit-datetime-edit-day-field,
-.date-input-placeholder::-webkit-datetime-edit-text {
-    color: #9ca3af;
-}
-.date-input-placeholder:focus::-webkit-datetime-edit-year-field,
-.date-input-placeholder:focus::-webkit-datetime-edit-month-field,
-.date-input-placeholder:focus::-webkit-datetime-edit-day-field,
-.date-input-placeholder:focus::-webkit-datetime-edit-text {
-    color: white;
-}
-.date-input-placeholder:valid {
-    color: white;
-}
-.date-input-placeholder:not([value=""])::-webkit-datetime-edit-year-field,
-.date-input-placeholder:not([value=""])::-webkit-datetime-edit-month-field,
-.date-input-placeholder:not([value=""])::-webkit-datetime-edit-day-field,
-.date-input-placeholder:not([value=""])::-webkit-datetime-edit-text {
-  color: white;
-}
-*/
-
 interface SignupData {
   firstname: string;
   lastname: string;
